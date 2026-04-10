@@ -9,6 +9,7 @@ using TrashCleaner.Enums;
 using TrashCleaner.Options;
 
 using System.Text.Json;
+using UnityEngine.Experimental.GlobalIllumination;
 
 [assembly: MelonInfo(typeof(TrashCleaner.TrashCleanerMod), "TrashCleaner", "2.0.0", "derrick")]
 [assembly: MelonAdditionalDependencies("DataCenterModLoader")]
@@ -48,11 +49,11 @@ namespace TrashCleaner
             SyncConfigFromOptions();
 
             LoggerInstance.Msg($"TrashCleaner Manual Keybind: {cleanupKey}");
-            LoggerInstance.Msg(config.autoCleanupEnabled
+            LoggerInstance.Msg((config.autoCleanupCableSpoolsEnabled || config.autoCleanupSFPBoxesEnabled)
                 ? $"TrashCleaner automation enabled every {GetCleanupIntervalSeconds() / 60d:0.##} minute(s)."
                 : "TrashCleaner automation disabled.");
             
-            if (config.autoCleanupEnabled)
+            if (config.autoCleanupCableSpoolsEnabled || config.autoCleanupSFPBoxesEnabled)
             {
                 nextAutoCleanupTime = GetCurrentTime() + GetCleanupIntervalSeconds();
             }
@@ -61,8 +62,10 @@ namespace TrashCleaner
         public sealed class ModConfig
         {
             public string toggleKey { get; set; } = nameof(Key.F9);
-            public bool autoCleanupEnabled { get; set; } = true;
+            public bool autoCleanupCableSpoolsEnabled { get; set; } = true;
+            public bool autoCleanupSFPBoxesEnabled { get; set; } = true;
             public double autoCleanupIntervalMinutes { get; set; } = DefaultCleanupIntervalSeconds / 60d;
+            public float cableSpoolLengthThreshold { get; set; } = 1.0f;
 
             public static ModConfig CreateDefault() => new();
         }
@@ -71,7 +74,7 @@ namespace TrashCleaner
         {
             SyncConfigFromOptions();
 
-            if (MainGameManager.instance != null && config.autoCleanupEnabled && GetCurrentTime() >= nextAutoCleanupTime)
+            if (MainGameManager.instance != null && (config.autoCleanupCableSpoolsEnabled || config.autoCleanupSFPBoxesEnabled) && GetCurrentTime() >= nextAutoCleanupTime)
             {
                 RunCleanup(automatic: true);
 
@@ -113,10 +116,40 @@ namespace TrashCleaner
                 triggerLabel = "Manual cleanup";
             }
 
-            var removed = RemoveEmptySfpBoxes();
-            LoggerInstance.Msg(removed > 0
-                ? $"{triggerLabel}: removed {removed} empty SFP box{(removed == 1 ? string.Empty : "es")}."
-                : $"{triggerLabel}: no empty SFP boxes found.");
+            if (config.autoCleanupCableSpoolsEnabled)
+            {
+                var removed = RemoveEmptyCableSpools();
+                LoggerInstance.Msg(removed > 0
+                    ? $"{triggerLabel}: removed {removed} empty cable spool{(removed == 1 ? string.Empty : "s")}."
+                    : $"{triggerLabel}: no empty cable spools found.");
+            }
+
+            if (config.autoCleanupSFPBoxesEnabled)
+            {
+                var removed = RemoveEmptySfpBoxes();
+                LoggerInstance.Msg(removed > 0
+                    ? $"{triggerLabel}: removed {removed} empty SFP box{(removed == 1 ? string.Empty : "es")}."
+                    : $"{triggerLabel}: no empty SFP boxes found.");
+            }
+        }
+
+        private int RemoveEmptyCableSpools()
+        {
+            var removed = 0;
+            var removedInstanceIds = new HashSet<int>();
+
+            foreach (var spool in UnityEngine.Object.FindObjectsOfType<CableSpinner>())
+            {
+                if (spool == null || spool.cableLenght > config.cableSpoolLengthThreshold)
+                {
+                    continue;
+                }
+
+                removed += DestroyUsableObject(spool, removedInstanceIds);
+
+            }
+
+            return removed;
         }
 
         private int RemoveEmptySfpBoxes()
@@ -251,17 +284,23 @@ namespace TrashCleaner
                 return;
             }
 
-            var autoCleanupEnabled = OptionsManager.Instance.GetConfigOptionValue<bool>(OptionType.AutoCleanupEnabled);
+            var autoCleanupSFPBoxesEnabled = OptionsManager.Instance.GetConfigOptionValue<bool>(OptionType.AutoCleanupSFPBoxesEnabled);
+            var autoCleanupCableSpoolsEnabled = OptionsManager.Instance.GetConfigOptionValue<bool>(OptionType.AutoCleanupCableSpoolsEnabled);
             var autoCleanupIntervalMinutes = Math.Max(1, OptionsManager.Instance.GetConfigOptionValue<int>(OptionType.AutoCleanupIntervalMinutes));
+            var cableSpoolLengthThreshold = Math.Max(0.1f, OptionsManager.Instance.GetConfigOptionValue<float>(OptionType.CableSpoolLengthThreshold));
 
-            if (config.autoCleanupEnabled == autoCleanupEnabled &&
-                Math.Abs(config.autoCleanupIntervalMinutes - autoCleanupIntervalMinutes) < double.Epsilon)
+            if (config.autoCleanupSFPBoxesEnabled == autoCleanupSFPBoxesEnabled &&
+                config.autoCleanupCableSpoolsEnabled == autoCleanupCableSpoolsEnabled &&
+                Math.Abs(config.autoCleanupIntervalMinutes - autoCleanupIntervalMinutes) < double.Epsilon &&
+                Math.Abs(config.cableSpoolLengthThreshold - cableSpoolLengthThreshold) < float.Epsilon)
             {
                 return;
             }
 
-            config.autoCleanupEnabled = autoCleanupEnabled;
+            config.autoCleanupSFPBoxesEnabled = autoCleanupSFPBoxesEnabled;
+            config.autoCleanupCableSpoolsEnabled = autoCleanupCableSpoolsEnabled;
             config.autoCleanupIntervalMinutes = autoCleanupIntervalMinutes;
+            config.cableSpoolLengthThreshold = cableSpoolLengthThreshold;
             SaveConfig(configPath, config);
             nextAutoCleanupTime = GetCurrentTime() + GetCleanupIntervalSeconds();
         }

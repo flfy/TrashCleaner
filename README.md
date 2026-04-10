@@ -48,6 +48,9 @@ Configuration is available through the **DataCenter-RustBridge** menu.
 
 - **Automatic Cleanup Interval** `default: 5 minutes`
   How often empty SFP boxes will be cleaned up.
+
+- **Cable Spool Length Threshold** `default: 1.5 meters`
+  Length threshold of cable spools to delete. Spools shorter than this will be deleted.
 ---
 ## Building from Source
 

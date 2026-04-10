@@ -38,6 +38,9 @@ public sealed class ConfigOption<T> : ConfigOption where T : struct
             case var type when type == typeof(int):
                 ModConfigSystem.RegisterIntOption(TrashCleanerMod.ModName, key, displayName, (int)DefaultValue, 1, 1440, description);
                 break;
+            case var type when type == typeof(float):
+                ModConfigSystem.RegisterFloatOption(TrashCleanerMod.ModName, key, displayName, (float)DefaultValue, 1.0f, 10.5f, description);
+                break;
         }
     }
 }

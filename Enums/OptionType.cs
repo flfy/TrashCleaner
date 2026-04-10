@@ -2,6 +2,8 @@ namespace TrashCleaner.Enums;
 
 public enum OptionType
 {
-    AutoCleanupEnabled,
-    AutoCleanupIntervalMinutes
+    AutoCleanupSFPBoxesEnabled,
+    AutoCleanupCableSpoolsEnabled,
+    AutoCleanupIntervalMinutes,
+    CableSpoolLengthThreshold
 }

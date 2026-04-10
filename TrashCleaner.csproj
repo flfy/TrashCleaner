@@ -8,7 +8,9 @@
     <Nullable>disable</Nullable>
     <AssemblyName>TrashCleaner</AssemblyName>
     <RootNamespace>TrashCleaner</RootNamespace>
+    <Version>2.0.0</Version>
     <LangVersion>latest</LangVersion>
+    <BaseOutputPath>bin/$(Version)/</BaseOutputPath>
     <gamepath Condition="'$(gamepath)' == ''">$(MSBuildProjectDirectory)/../..</gamepath>
     <NuGetAudit>false</NuGetAudit>
     <GenerateDependencyFile>false</GenerateDependencyFile>
@@ -68,6 +70,8 @@
   </ItemGroup>
 
   <Target Name="CopyModToGameMods" AfterTargets="Build">
+    <Delete Files="$(gamepath)/Mods/SFPBoxCleaner.dll" Condition="Exists('$(gamepath)/Mods/SFPBoxCleaner.dll')" />
+    <RemoveDir Directories="$(gamepath)/Mods/SFPBoxCleaner" Condition="Exists('$(gamepath)/Mods/SFPBoxCleaner')" />
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(gamepath)/Mods/" SkipUnchangedFiles="true" />
   </Target>
 

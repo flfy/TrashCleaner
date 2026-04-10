@@ -12,7 +12,7 @@ The format is based on Keep a Changelog, and this project follows Semantic Versi
 - Renamed the output assembly to `TrashCleaner.dll`.
 - Renamed the generated config folder to `TrashCleaner`.
 - Renamed the project, solution, and repository to `TrashCleaner`.
-- Updated the README to reflect the new mod name and build flow.
+- Added support for cleaning up cable spools, and an option to set the threshold
 
 ### Build
 
