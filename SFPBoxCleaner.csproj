@@ -10,6 +10,11 @@
     <RootNamespace>SFPBoxCleaner</RootNamespace>
     <LangVersion>latest</LangVersion>
     <gamepath Condition="'$(gamepath)' == ''">$(MSBuildProjectDirectory)/../..</gamepath>
+    <OutputPath>$(gamepath)/Mods/</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,6 +24,10 @@
     </Reference>
     <Reference Include="0Harmony">
       <HintPath>$(gamepath)/MelonLoader/net6/0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="DataCenterModLoader">
+      <HintPath>$(gamepath)/Mods/RustBridge.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Il2CppInterop.Common">

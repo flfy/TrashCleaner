@@ -1,261 +1,321 @@
-using System.Text.Json;
+using DataCenterModLoader;
 using Il2Cpp;
 using MelonLoader;
+
 using UnityEngine;
 using UnityEngine.InputSystem;
-using Object = UnityEngine.Object;
+
+using SFPBoxCleaner.Enums;
+using SFPBoxCleaner.Options;
+
+using System.Text.Json;
 
 [assembly: MelonInfo(typeof(SFPBoxCleaner.SFPBoxCleanerMod), "SFPBoxCleaner", "1.0.0", "derrick")]
+[assembly: MelonAdditionalDependencies("DataCenterModLoader")]
 [assembly: MelonGame(null, "Data Center")]
 
-namespace SFPBoxCleaner;
-
-public sealed class SFPBoxCleanerMod : MelonMod
+namespace SFPBoxCleaner
 {
-    private const string ModFolderName = "SFPBoxCleaner";
-    private const string ConfigFileName = "config.json";
-    private const double DefaultCleanupIntervalSeconds = 300d;
-    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
-
-    private ModConfig _config = ModConfig.CreateDefault();
-    private Key _cleanupKey = Key.F9;
-    private string _configPath = string.Empty;
-    private double _nextAutoCleanupTime;
-
-    public override void OnInitializeMelon()
+    public sealed class SFPBoxCleanerMod : MelonMod
     {
-        var modDirectory = Path.Combine(Path.GetDirectoryName(typeof(SFPBoxCleanerMod).Assembly.Location), ModFolderName);
-        Directory.CreateDirectory(modDirectory);
+        public const string ModName = "SFPBoxCleaner";
+        private const string Author = "derrick";
+        private const string Version = "1.0.0";
+        private const string ModFolderName = "SFPBoxCleaner";
+        private const string ConfigFileName = "config.json";
+        private const double DefaultCleanupIntervalSeconds = 300d;
 
-        _configPath = Path.Combine(modDirectory, ConfigFileName);
-        _config = LoadConfig(_configPath);
-        _cleanupKey = ParseKey(_config.toggleKey);
-        _nextAutoCleanupTime = GetCurrentTime() + GetCleanupIntervalSeconds();
+        private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
+        private ModConfig config = ModConfig.CreateDefault();
+        private Key cleanupKey = Key.F9;
+        
+        private string configPath = string.Empty;
+        private double nextAutoCleanupTime;
 
-        LoggerInstance.Msg($"Empty SFP box cleanup key: {_cleanupKey}");
-        LoggerInstance.Msg(_config.autoCleanupEnabled
-            ? $"Automatic empty SFP box cleanup enabled every {GetCleanupIntervalSeconds() / 60d:0.##} minute(s)."
-            : "Automatic empty SFP box cleanup disabled.");
-    }
-
-    private sealed class ModConfig
-    {
-        public string toggleKey { get; set; } = nameof(Key.F9);
-        public bool autoCleanupEnabled { get; set; } = true;
-        public double autoCleanupIntervalMinutes { get; set; } = DefaultCleanupIntervalSeconds / 60d;
-
-        public static ModConfig CreateDefault() => new();
-    }
-
-    public override void OnUpdate()
-    {
-        if (MainGameManager.instance != null && _config.autoCleanupEnabled && GetCurrentTime() >= _nextAutoCleanupTime)
+        public override void OnInitializeMelon()
         {
-            RunCleanup("Automatic cleanup");
-            _nextAutoCleanupTime = GetCurrentTime() + GetCleanupIntervalSeconds();
-        }
+            var modDirectory = Path.Combine(Path.GetDirectoryName(typeof(SFPBoxCleanerMod).Assembly.Location), ModFolderName);
+            Directory.CreateDirectory(modDirectory);
 
-        var keyboard = Keyboard.current;
-        if (keyboard is null)
-        {
-            return;
-        }
+            configPath = Path.Combine(modDirectory, ConfigFileName);
+            config = LoadConfig(configPath);
 
-        var keyControl = keyboard[_cleanupKey];
-        if (keyControl is null || !keyControl.wasPressedThisFrame)
-        {
-            return;
-        }
+            cleanupKey = ParseKey(config.toggleKey);
 
-        RunCleanup("Manual cleanup");
-    }
+            ModConfigSystem.SetModInfo(ModName, Author, Version);
+            OptionsManager.Instance.InitializeOptions(config);
 
-    private void RunCleanup(string triggerLabel)
-    {
-        if (MainGameManager.instance == null)
-        {
-            LoggerInstance.Warning($"{triggerLabel} requested before a game world was loaded.");
-            return;
-        }
+            SyncConfigFromOptions();
 
-        var removed = RemoveEmptySfpBoxes();
-        LoggerInstance.Msg(removed > 0
-            ? $"{triggerLabel}: removed {removed} empty SFP box{(removed == 1 ? string.Empty : "es")}."
-            : $"{triggerLabel}: no empty SFP boxes found.");
-    }
-
-    private int RemoveEmptySfpBoxes()
-    {
-        var removed = 0;
-        var removedInstanceIds = new HashSet<int>();
-
-        foreach (var box in Object.FindObjectsOfType<SFPBox>())
-        {
-            if (box == null || !ShouldRemoveLooseBox(box) || !IsActuallyEmpty(box))
+            LoggerInstance.Msg($"SFPBoxCleaner Manual Keybind: {cleanupKey}");
+            LoggerInstance.Msg(config.autoCleanupEnabled
+                ? $"SFPBoxCleaner automation enabled every {GetCleanupIntervalSeconds() / 60d:0.##} minute(s)."
+                : "SFPBoxCleaner automation disabled.");
+            
+            if (config.autoCleanupEnabled)
             {
-                continue;
+                nextAutoCleanupTime = GetCurrentTime() + GetCleanupIntervalSeconds();
+            }
+        }
+
+        public sealed class ModConfig
+        {
+            public string toggleKey { get; set; } = nameof(Key.F9);
+            public bool autoCleanupEnabled { get; set; } = true;
+            public double autoCleanupIntervalMinutes { get; set; } = DefaultCleanupIntervalSeconds / 60d;
+
+            public static ModConfig CreateDefault() => new();
+        }
+
+        public override void OnUpdate()
+        {
+            SyncConfigFromOptions();
+
+            if (MainGameManager.instance != null && config.autoCleanupEnabled && GetCurrentTime() >= nextAutoCleanupTime)
+            {
+                RunCleanup(automatic: true);
+
+                return;
             }
 
-            removed += DestroyUsableObject(box, removedInstanceIds);
+            var keyboard = Keyboard.current;
+            if (keyboard is null)
+            {
+                return;
+            }
+
+            var keyControl = keyboard[cleanupKey];
+            if (keyControl is null || !keyControl.wasPressedThisFrame)
+            {
+                return;
+            }
+
+            RunCleanup();
         }
 
-        var emptyPrefabName = NormalizeName(MainGameManager.instance.emptySfpBox?.name);
-
-        if (string.IsNullOrWhiteSpace(emptyPrefabName))
+        private void RunCleanup(bool automatic = false)
         {
+
+            if (MainGameManager.instance == null)
+            {
+                LoggerInstance.Warning($"Cleanup requested before a game world was loaded.");
+                return;
+            }
+
+            string triggerLabel;
+            if (automatic)
+            {
+                triggerLabel = "Automatic cleanup";
+                nextAutoCleanupTime = GetCurrentTime() + GetCleanupIntervalSeconds();
+
+            } else
+            {
+                triggerLabel = "Manual cleanup";
+            }
+
+            var removed = RemoveEmptySfpBoxes();
+            LoggerInstance.Msg(removed > 0
+                ? $"{triggerLabel}: removed {removed} empty SFP box{(removed == 1 ? string.Empty : "es")}."
+                : $"{triggerLabel}: no empty SFP boxes found.");
+        }
+
+        private int RemoveEmptySfpBoxes()
+        {
+            var removed = 0;
+            var removedInstanceIds = new HashSet<int>();
+
+            foreach (var box in UnityEngine.Object.FindObjectsOfType<SFPBox>())
+            {
+                if (box == null || !ShouldRemoveLooseBox(box) || !IsActuallyEmpty(box))
+                {
+                    continue;
+                }
+
+                removed += DestroyUsableObject(box, removedInstanceIds);
+            }
+
+            var emptyPrefabName = NormalizeName(MainGameManager.instance.emptySfpBox?.name);
+
+            if (string.IsNullOrWhiteSpace(emptyPrefabName))
+            {
+                return removed;
+            }
+
+            /*foreach (var usable in UnityEngine.Object.FindObjectsOfType<UsableObject>())
+            {
+                if (usable == null || usable is SFPBox || !ShouldRemoveLooseBox(usable))
+                {
+                    continue;
+                }
+
+                if (usable.objectInHandType != PlayerManager.ObjectInHand.SFPBox)
+                {
+                    continue;
+                }
+
+                if (!string.Equals(NormalizeName(usable.gameObject.name), emptyPrefabName, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                removed += DestroyUsableObject(usable, removedInstanceIds);
+            }*/
+
             return removed;
         }
 
-        foreach (var usable in Object.FindObjectsOfType<UsableObject>())
+        private static bool ShouldRemoveLooseBox(UsableObject usable)
         {
-            if (usable == null || usable is SFPBox || !ShouldRemoveLooseBox(usable))
+            if (usable.objectInHands || usable.isOnTrolley || usable.currentRackPosition != null)
             {
-                continue;
+                return false;
             }
 
-            if (usable.objectInHandType != PlayerManager.ObjectInHand.SFPBox)
+            if (PlayerManager.instance != null && PlayerManager.instance.objectInHand == PlayerManager.ObjectInHand.SFPBox)
             {
-                continue;
-            }
-
-            if (!string.Equals(NormalizeName(usable.gameObject.name), emptyPrefabName, StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            removed += DestroyUsableObject(usable, removedInstanceIds);
-        }
-
-        return removed;
-    }
-
-    private static bool ShouldRemoveLooseBox(UsableObject usable)
-    {
-        if (usable.objectInHands || usable.isOnTrolley || usable.currentRackPosition != null)
-        {
-            return false;
-        }
-
-        if (PlayerManager.instance != null && PlayerManager.instance.objectInHand == PlayerManager.ObjectInHand.SFPBox)
-        {
-            var heldObjects = PlayerManager.instance.objectInHandGO;
-            if (heldObjects != null)
-            {
-                foreach (var heldObject in heldObjects)
+                var heldObjects = PlayerManager.instance.objectInHandGO;
+                if (heldObjects != null)
                 {
-                    if (heldObject != null && heldObject == usable.gameObject)
+                    foreach (var heldObject in heldObjects)
+                    {
+                        if (heldObject != null && heldObject == usable.gameObject)
+                        {
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        private static bool IsActuallyEmpty(SFPBox box)
+        {
+            var usedPositions = box.usedPositions;
+            if (usedPositions != null)
+            {
+                foreach (var usedPosition in usedPositions)
+                {
+                    if (usedPosition != 0)
                     {
                         return false;
                     }
                 }
             }
-        }
 
-        return true;
-    }
-
-    private static bool IsActuallyEmpty(SFPBox box)
-    {
-        var usedPositions = box.usedPositions;
-        if (usedPositions != null)
-        {
-            foreach (var usedPosition in usedPositions)
+            foreach (var module in box.GetComponentsInChildren<SFPModule>(true))
             {
-                if (usedPosition != 0)
+                if (module != null && module.isInTheBox)
                 {
                     return false;
                 }
             }
+
+            return true;
         }
 
-        foreach (var module in box.GetComponentsInChildren<SFPModule>(true))
+        private static int DestroyUsableObject(UsableObject usable, HashSet<int> removedInstanceIds)
         {
-            if (module != null && module.isInTheBox)
+            var gameObject = usable.gameObject;
+            var instanceId = gameObject.GetInstanceID();
+            if (!removedInstanceIds.Add(instanceId))
             {
-                return false;
+                return 0;
+            }
+
+            UnityEngine.Object.Destroy(gameObject);
+            return 1;
+        }
+
+        private static string NormalizeName(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return string.Empty;
+            }
+
+            return name.EndsWith("(Clone)", StringComparison.Ordinal)
+                ? name[..^"(Clone)".Length].TrimEnd()
+                : name;
+        }
+
+        private static double GetCurrentTime()
+        {
+            return Time.realtimeSinceStartupAsDouble;
+        }
+
+        private void SyncConfigFromOptions()
+        {
+            if (!OptionsManager.Instance.Initialized)
+            {
+                return;
+            }
+
+            var autoCleanupEnabled = OptionsManager.Instance.GetConfigOptionValue<bool>(OptionType.AutoCleanupEnabled);
+            var autoCleanupIntervalMinutes = Math.Max(1, OptionsManager.Instance.GetConfigOptionValue<int>(OptionType.AutoCleanupIntervalMinutes));
+
+            if (config.autoCleanupEnabled == autoCleanupEnabled &&
+                Math.Abs(config.autoCleanupIntervalMinutes - autoCleanupIntervalMinutes) < double.Epsilon)
+            {
+                return;
+            }
+
+            config.autoCleanupEnabled = autoCleanupEnabled;
+            config.autoCleanupIntervalMinutes = autoCleanupIntervalMinutes;
+            SaveConfig(configPath, config);
+            nextAutoCleanupTime = GetCurrentTime() + GetCleanupIntervalSeconds();
+        }
+
+        private double GetCleanupIntervalSeconds()
+        {
+            return Math.Max(1d, config.autoCleanupIntervalMinutes) * 60d;
+        }
+
+        private ModConfig LoadConfig(string path)
+        {
+            if (!File.Exists(path))
+            {
+                SaveConfig(path, config);
+                return config;
+            }
+
+            try
+            {
+                var json = File.ReadAllText(path);
+                return JsonSerializer.Deserialize<ModConfig>(json) ?? ModConfig.CreateDefault();
+            }
+            catch (Exception ex)
+            {
+                LoggerInstance.Warning($"Failed to parse config at '{path}': {ex.Message}. Rewriting defaults.");
+                var fallback = ModConfig.CreateDefault();
+                SaveConfig(path, fallback);
+                return fallback;
             }
         }
 
-        return true;
-    }
-
-    private static int DestroyUsableObject(UsableObject usable, HashSet<int> removedInstanceIds)
-    {
-        var gameObject = usable.gameObject;
-        var instanceId = gameObject.GetInstanceID();
-        if (!removedInstanceIds.Add(instanceId))
+        private static void SaveConfig(string path, ModConfig config)
         {
-            return 0;
+            File.WriteAllText(path, JsonSerializer.Serialize(config, JsonOptions));
         }
 
-        Object.Destroy(gameObject);
-        return 1;
-    }
-
-    private static string NormalizeName(string name)
-    {
-        if (string.IsNullOrWhiteSpace(name))
+        private Key ParseKey(string configuredKey)
         {
-            return string.Empty;
-        }
+            if (!string.IsNullOrWhiteSpace(configuredKey) &&
+                Enum.TryParse(configuredKey, ignoreCase: true, out Key parsedKey))
+            {
+                return parsedKey;
+            }
 
-        return name.EndsWith("(Clone)", StringComparison.Ordinal)
-            ? name[..^"(Clone)".Length].TrimEnd()
-            : name;
-    }
+            if (!string.IsNullOrWhiteSpace(configuredKey))
+            {
+                LoggerInstance.Warning($"Unknown key '{configuredKey}' in config. Falling back to F9.");
+            }
 
-    private static double GetCurrentTime()
-    {
-        return Time.realtimeSinceStartupAsDouble;
-    }
-
-    private double GetCleanupIntervalSeconds()
-    {
-        return Math.Max(1d, _config.autoCleanupIntervalMinutes) * 60d;
-    }
-
-    private ModConfig LoadConfig(string path)
-    {
-        if (!File.Exists(path))
-        {
-            SaveConfig(path, _config);
-            return _config;
-        }
-
-        try
-        {
-            var json = File.ReadAllText(path);
-            return JsonSerializer.Deserialize<ModConfig>(json) ?? ModConfig.CreateDefault();
-        }
-        catch (Exception ex)
-        {
-            LoggerInstance.Warning($"Failed to parse config at '{path}': {ex.Message}. Rewriting defaults.");
-            var fallback = ModConfig.CreateDefault();
-            SaveConfig(path, fallback);
-            return fallback;
+            config.toggleKey = nameof(Key.F9);
+            SaveConfig(configPath, config);
+            return Key.F9;
         }
     }
 
-    private static void SaveConfig(string path, ModConfig config)
-    {
-        File.WriteAllText(path, JsonSerializer.Serialize(config, JsonOptions));
-    }
 
-    private Key ParseKey(string configuredKey)
-    {
-        if (!string.IsNullOrWhiteSpace(configuredKey) &&
-            Enum.TryParse(configuredKey, ignoreCase: true, out Key parsedKey))
-        {
-            return parsedKey;
-        }
-
-        if (!string.IsNullOrWhiteSpace(configuredKey))
-        {
-            LoggerInstance.Warning($"Unknown key '{configuredKey}' in config. Falling back to F9.");
-        }
-
-        _config.toggleKey = nameof(Key.F9);
-        SaveConfig(_configPath, _config);
-        return Key.F9;
-    }
 }
