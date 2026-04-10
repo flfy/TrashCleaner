@@ -9,9 +9,8 @@ using TrashCleaner.Enums;
 using TrashCleaner.Options;
 
 using System.Text.Json;
-using UnityEngine.Experimental.GlobalIllumination;
 
-[assembly: MelonInfo(typeof(TrashCleaner.TrashCleanerMod), "TrashCleaner", "2.0.0", "derrick")]
+[assembly: MelonInfo(typeof(TrashCleaner.TrashCleanerMod), "TrashCleaner", "2.0.1", "derrick")]
 [assembly: MelonAdditionalDependencies("DataCenterModLoader")]
 [assembly: MelonGame(null, "Data Center")]
 
@@ -39,7 +38,7 @@ namespace TrashCleaner
             Directory.CreateDirectory(modDirectory);
 
             configPath = Path.Combine(modDirectory, ConfigFileName);
-            
+
             config = LoadConfig(configPath);
             cleanupKey = ParseKey(config.toggleKey);
 
