@@ -20,7 +20,7 @@ namespace TrashCleaner
     {
         public const string ModName = "TrashCleaner";
         private const string Author = "derrick";
-        private const string Version = "2.0.0";
+        private const string Version = "2.0.1";
         private const string ModFolderName = "TrashCleaner";
         private const string ConfigFileName = "config.json";
         private const double DefaultCleanupIntervalSeconds = 300d;

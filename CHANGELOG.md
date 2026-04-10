@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog, and this project follows Semantic Versioning.
 
+## [2.0.1] - 2026-04-10
+
+### Changed
+- Fixed default cable threshold (was 1.0, now 1.5)
+- Enforced codestyle
+
 ## [2.0.0] - 2026-04-10
 
 ### Changed
