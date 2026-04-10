@@ -10,6 +10,7 @@
     <RootNamespace>SFPBoxCleaner</RootNamespace>
     <LangVersion>latest</LangVersion>
     <gamepath Condition="'$(gamepath)' == ''">$(MSBuildProjectDirectory)/../..</gamepath>
+    <NuGetAudit>false</NuGetAudit>
     <GenerateDependencyFile>false</GenerateDependencyFile>
     <DebugType>none</DebugType>
     <DebugSymbols>false</DebugSymbols>

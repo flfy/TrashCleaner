@@ -23,8 +23,8 @@ This mod adds automatic and manual cleanup modes.
 
 1. Install **MelonLoader** for **Data Center**
 2. Install **DataCenter-RustBridge** for **Data Center**
-3. Download the latest release of **SFP Box Cleaner**
-4. Open the archive, then drag and drop the **Mods** folder into your **Data Center** folder.
+3. [Download]() the latest `.dll` release of **SFP Box Cleaner**
+4. Drag and drop `SFPBoxCleaner.dll` into your **Data Center/Mods** folder.
 
 ```
 Data Center/
