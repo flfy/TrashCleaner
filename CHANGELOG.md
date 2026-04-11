@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog, and this project follows Semantic Versioning.
 
+## [2.1.0] - 2026-04-10
+
+### Added
+- Added an SFP keep zone that preserves empty SFP boxes placed inside a chosen area.
+- Added an `F10` capture hotkey to save the keep-zone center from the player's current position.
+
 ## [2.0.1] - 2026-04-10
 
 ### Changed

@@ -20,10 +20,15 @@ namespace TrashCleaner.Options
 
     public sealed class ConfigOption<T> : ConfigOption where T : struct
     {
-        public ConfigOption(string key, string displayName, T defaultValue, string description)
+        private readonly T? minimumValue;
+        private readonly T? maximumValue;
+
+        public ConfigOption(string key, string displayName, T defaultValue, string description, T? minimumValue = null, T? maximumValue = null)
             : base(key, displayName, defaultValue, description)
         {
             DefaultValue = defaultValue;
+            this.minimumValue = minimumValue;
+            this.maximumValue = maximumValue;
 
             if (!OptionsManager.Instance.AddConfigOption(this))
             {
@@ -36,10 +41,24 @@ namespace TrashCleaner.Options
                     ModConfigSystem.RegisterBoolOption(TrashCleanerMod.ModName, key, displayName, (bool)DefaultValue, description);
                     break;
                 case var type when type == typeof(int):
-                    ModConfigSystem.RegisterIntOption(TrashCleanerMod.ModName, key, displayName, (int)DefaultValue, 1, 1440, description);
+                    ModConfigSystem.RegisterIntOption(
+                        TrashCleanerMod.ModName,
+                        key,
+                        displayName,
+                        (int)DefaultValue,
+                        minimumValue.HasValue ? (int)(object)minimumValue.Value : 1,
+                        maximumValue.HasValue ? (int)(object)maximumValue.Value : 1440,
+                        description);
                     break;
                 case var type when type == typeof(float):
-                    ModConfigSystem.RegisterFloatOption(TrashCleanerMod.ModName, key, displayName, (float)DefaultValue, 1.0f, 10.5f, description);
+                    ModConfigSystem.RegisterFloatOption(
+                        TrashCleanerMod.ModName,
+                        key,
+                        displayName,
+                        (float)DefaultValue,
+                        minimumValue.HasValue ? (float)(object)minimumValue.Value : 1.0f,
+                        maximumValue.HasValue ? (float)(object)maximumValue.Value : 10.5f,
+                        description);
                     break;
             }
         }

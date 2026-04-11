@@ -9,8 +9,8 @@ This mod adds automatic and manual cleanup modes.
 
 - Configurable automatic cleanup of empty SFP boxes.
 - Configurable automatic cleanup of low cable spools, with a configurable threshold.
-- Configurable cleanup key to run cleanup whenever you want.
-	- By default, the automatic cleanup interval is `5 minutes`, and the manual cleanup key is `F9`.
+- Protected SFP keep zone so empty boxes placed in one chosen area are not deleted.
+- Configurable cleanup key to run cleanup whenever you want. By default, the automatic cleanup interval is `5 minutes`, the manual cleanup key is `F9`, and the SFP keep-zone capture key is `F10`.
 - In-game configuration menu using [DataCenter-RustBridge](https://github.com/Joniii11/DataCenter-RustBridge).
 ---
 
@@ -40,21 +40,32 @@ Data Center/
 
 Configuration is available through the **DataCenter-RustBridge** menu.
 
-**Note:** The hotkey setting cannot be changed through the Mod Settings menu. You will have to edit `config.json`.
+**Note:** The hotkey settings and SFP keep-zone center cannot be changed through the Mod Settings menu. Use `config.json`, or press the keep-zone capture key in-game to store your current position as the protected SFP area.
 
 ### Available Options
 
 - **Enable Automatic Cleanup of empty SFP boxes** `default: true`
   Enables automatic cleanup of empty SFP boxes.
 
-- **Enable Automatic Cleanup of Cable Spools** `default true`
+- **Enable Automatic Cleanup of Cable Spools** `default: true`
   Enables automatic cleanup of cable spools based on the set threshold.
+
+- **Enable SFP Keep Zone** `default true`
+  Enables a "Keep Safe" zone for empty SFP boxes. `F10` to set the center-point of the zone first.
+
+- **SFP Keep Zone Radius** `default 3 meters`
+  Horizontal radius of the protected area around the saved center point.
 
 - **Automatic Cleanup Interval** `default: 5 minutes`
   How often empty SFP boxes will be cleaned up.
 
 - **Cable Spool Length Threshold** `default: 1.5 meters`
   Length threshold of cable spools to delete. Spools shorter than this will be deleted.
+
+## SFP Keep Zone
+
+Press `F10` while standing where you want to store empty SFP boxes. If you are standing on or immediately next to an SFP box, the keep zone snaps to that box so the stored center matches the box footprint more closely. Otherwise it saves your current world position into `TrashCleaner/config.json`.
+
 ---
 ## Building from Source
 
@@ -86,7 +97,7 @@ dotnet build TrashCleaner.csproj
 The compiled DLL is written to:
 
 ```text
-bin/Debug/net6.0/TrashCleaner.dll
+bin/2.1.0/Debug/net6.0/TrashCleaner.dll
 ```
 
 After the build completes, the project also copies `TrashCleaner.dll` into your game's `Mods` folder:

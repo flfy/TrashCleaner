@@ -5,6 +5,8 @@ namespace TrashCleaner.Enums
         AutoCleanupCableSpoolsEnabled,
         AutoCleanupSFPBoxesEnabled,
         AutoCleanupIntervalMinutes,
-        CableSpoolLengthThreshold
+        CableSpoolLengthThreshold,
+        SFPKeepZoneEnabled,
+        SFPKeepZoneRadiusMeters
     }
 }

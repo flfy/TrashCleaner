@@ -42,6 +42,20 @@ namespace TrashCleaner.Options
                 defaultValue: defaults.autoCleanupSFPBoxesEnabled,
                 description: "Enables automatic cleanup of empty SFP boxes.");
 
+            new ConfigOption<bool>(
+                key: nameof(OptionType.SFPKeepZoneEnabled),
+                displayName: "Enable SFP Box Keep Zone",
+                defaultValue: defaults.sfpKeepZoneEnabled,
+                description: "Prevents automatic cleanup of empty SFP boxes inside the protected keep zone.");
+
+            new ConfigOption<float>(
+                key: nameof(OptionType.SFPKeepZoneRadiusMeters),
+                displayName: "SFP Keep Zone Radius",
+                defaultValue: Math.Max(0.1f, defaults.sfpKeepZoneRadiusMeters),
+                description: "Horizontal radius of the protected SFP keep zone, in meters.",
+                minimumValue: 0.1f,
+                maximumValue: 25f);
+
             new ConfigOption<int>(
                 key: nameof(OptionType.AutoCleanupIntervalMinutes),
                 displayName: "Automatic Cleanup Interval",
@@ -52,7 +66,9 @@ namespace TrashCleaner.Options
                 key: nameof(OptionType.CableSpoolLengthThreshold),
                 displayName: "Cable Spool Length Threshold",
                 defaultValue: Math.Max(0.1f, defaults.cableSpoolLengthThreshold),
-                description: "The minimum length of cable spools to keep, in meters.");
+                description: "The minimum length of cable spools to keep, in meters.",
+                minimumValue: 0.1f,
+                maximumValue: 10.5f);
 
             Initialized = true;
         }
