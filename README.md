@@ -97,7 +97,7 @@ dotnet build TrashCleaner.csproj
 The compiled DLL is written to:
 
 ```text
-bin/2.1.0/Debug/net6.0/TrashCleaner.dll
+bin/2.1.1/Debug/net6.0/TrashCleaner.dll
 ```
 
 After the build completes, the project also copies `TrashCleaner.dll` into your game's `Mods` folder:

@@ -10,7 +10,7 @@ using TrashCleaner.Options;
 
 using System.Text.Json;
 
-[assembly: MelonInfo(typeof(TrashCleaner.TrashCleanerMod), "TrashCleaner", "2.1.0", "derrick")]
+[assembly: MelonInfo(typeof(TrashCleaner.TrashCleanerMod), "TrashCleaner", "2.1.1", "derrick")]
 [assembly: MelonAdditionalDependencies("DataCenterModLoader")]
 [assembly: MelonGame(null, "Data Center")]
 
@@ -21,7 +21,7 @@ namespace TrashCleaner
         public const string ModName = "TrashCleaner";
 
         private const string Author = "derrick";
-        private const string Version = "2.1.0";
+        private const string Version = "2.1.1";
         private const string ModFolderName = "TrashCleaner";
         private const string ConfigFileName = "config.json";
         private const double DefaultCleanupIntervalSeconds = 300d;
@@ -151,18 +151,12 @@ namespace TrashCleaner
                 nextAutoCleanupTime = GetCurrentTime() + GetCleanupIntervalSeconds();
             }
 
-            if (config.autoCleanupCableSpoolsEnabled)
-            {
-                var removed = RemoveEmptyCableSpools();
-                LoggerInstance.Msg(removed > 0
-                    ? $"{triggerLabel}: removed {removed} empty cable spool{(removed == 1 ? string.Empty : "s")}."
-                    : $"{triggerLabel}: no empty cable spools found.");
-            }
+            var removed = RemoveEmptyCableSpools();
+            LoggerInstance.Msg(removed > 0
+                ? $"{triggerLabel}: removed {removed} empty cable spool{(removed == 1 ? string.Empty : "s")}."
+                : $"{triggerLabel}: no empty cable spools found.");
 
-            if (config.autoCleanupSFPBoxesEnabled)
-            {
-                LogSfpCleanupResult(triggerLabel, RemoveEmptySfpBoxes());
-            }
+            LogSfpCleanupResult(triggerLabel, RemoveEmptySfpBoxes());
         }
 
         private void LogSfpCleanupResult(string triggerLabel, SfpBoxCleanupResult cleanupResult)

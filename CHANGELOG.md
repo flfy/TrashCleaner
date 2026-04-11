@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog, and this project follows Semantic Versioning.
 
+## [2.1.1] - 2026-04-11
+
+### Changed
+- Fixed manual cleanup not working when automations are off.
+
 ## [2.1.0] - 2026-04-10
 
 ### Added
